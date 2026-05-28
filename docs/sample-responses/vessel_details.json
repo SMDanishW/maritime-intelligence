@@ -1,0 +1,140 @@
+[
+  {
+    "vesselId": 6367,
+    "mmsi": 311085000,
+    "name": "Star Legend",
+    "namePrefix": "ms",
+    "imoLloyds": 9008598,
+    "radioCallSign": "C6FR6",
+    "radioCallSignType": "REAL",
+    "updateTimestamp": "2026-05-27T10:31:18.000Z",
+    "dataSource": "Portnet",
+    "vesselConstruction": {
+      "vesselTypeCode": 10,
+      "vesselTypeName": "Passenger ship",
+      "iceClassCode": "II",
+      "iceClassIssueDate": "2026-05-25T21:00:00.000Z",
+      "iceClassIssuePlace": "Lisbon",
+      "iceClassEndDate": "2031-05-20T21:00:00.000Z",
+      "doubleBottom": true,
+      "inertGasSystem": true,
+      "ballastTank": true
+    },
+    "vesselDimensions": {
+      "tonnageCertificateIssuer": "Nantes",
+      "dateOfIssue": "2021-05-09T21:00:00.000Z",
+      "grossTonnage": 12969,
+      "netTonnage": 4155,
+      "deathWeight": 780,
+      "length": 112.4,
+      "overallLength": 135.0,
+      "height": 12.4,
+      "breadth": 20.5,
+      "draught": 5.17,
+      "maxSpeed": null,
+      "enginePower": "2*2180+2*1460"
+    },
+    "vesselRegistration": {
+      "nationality": "BS",
+      "portOfRegistry": "Nassau"
+    },
+    "vesselSystem": {
+      "shipOwner": " ",
+      "shipTelephone1": " ",
+      "shipEmail": " ",
+      "shipVerifier": "LIVI"
+    }
+  },
+  {
+    "vesselId": 99993609,
+    "mmsi": 209671000,
+    "name": "Cemluna",
+    "namePrefix": "MV",
+    "imoLloyds": 9007063,
+    "radioCallSign": "C4BX2",
+    "radioCallSignType": "REAL",
+    "updateTimestamp": "2026-05-27T05:19:01.000Z",
+    "dataSource": "Portnet",
+    "vesselConstruction": {
+      "vesselTypeCode": 60,
+      "vesselTypeName": "Dry-bulk vessel",
+      "iceClassCode": "II",
+      "iceClassIssueDate": "2026-04-12T21:00:00.000Z",
+      "iceClassIssuePlace": "Szczecin",
+      "iceClassEndDate": "2031-04-29T21:00:00.000Z",
+      "doubleBottom": false,
+      "inertGasSystem": false,
+      "ballastTank": false
+    },
+    "vesselDimensions": {
+      "tonnageCertificateIssuer": "Nantes",
+      "dateOfIssue": "2016-02-21T22:00:00.000Z",
+      "grossTonnage": 2706,
+      "netTonnage": 1078,
+      "deathWeight": 3828,
+      "length": 0.0,
+      "overallLength": 89.48,
+      "height": 0.0,
+      "breadth": 13.5,
+      "draught": 0.0,
+      "maxSpeed": null,
+      "enginePower": " "
+    },
+    "vesselRegistration": {
+      "nationality": "CY",
+      "portOfRegistry": "LIMASSOL"
+    },
+    "vesselSystem": {
+      "shipOwner": " ",
+      "shipTelephone1": " ",
+      "shipEmail": " ",
+      "shipVerifier": "LIVI"
+    }
+  },
+  {
+    "vesselId": 99994307,
+    "mmsi": 248615000,
+    "name": "Klarika",
+    "namePrefix": "ms",
+    "imoLloyds": 9342164,
+    "radioCallSign": "9HA4724",
+    "radioCallSignType": "REAL",
+    "updateTimestamp": "2026-05-27T10:32:49.000Z",
+    "dataSource": "Portnet",
+    "vesselConstruction": {
+      "vesselTypeCode": 70,
+      "vesselTypeName": "Dry cargo vessel",
+      "iceClassCode": "IB",
+      "iceClassIssueDate": "2023-05-14T21:00:00.000Z",
+      "iceClassIssuePlace": "Helsinki",
+      "iceClassEndDate": "2027-12-18T22:00:00.000Z",
+      "doubleBottom": false,
+      "inertGasSystem": false,
+      "ballastTank": false
+    },
+    "vesselDimensions": {
+      "tonnageCertificateIssuer": "Tallinn",
+      "dateOfIssue": "2018-01-24T22:00:00.000Z",
+      "grossTonnage": 4102,
+      "netTonnage": 1851,
+      "deathWeight": 5400,
+      "length": 100.62,
+      "overallLength": 106.86,
+      "height": 7.85,
+      "breadth": 15.2,
+      "draught": 5.25,
+      "maxSpeed": null,
+      "enginePower": "2010"
+    },
+    "vesselRegistration": {
+      "nationality": "MT",
+      "portOfRegistry": "Valletta"
+    },
+    "vesselSystem": {
+      "shipOwner": " ",
+      "shipTelephone1": " ",
+      "shipEmail": " ",
+      "shipVerifier": "LIVI"
+    }
+  }
+]

@@ -1,0 +1,13 @@
+# Install production deps first: pip install -r requirements.txt
+-r requirements.txt
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+pytest==9.0.3
+pytest-asyncio==1.4.0
+pytest-httpx==0.36.2
+iniconfig==2.3.0
+pluggy==1.6.0
+colorama==0.4.6
+
+# ── Linting ────────────────────────────────────────────────────────────────────
+ruff==0.15.14

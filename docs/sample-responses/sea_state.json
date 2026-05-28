@@ -1,0 +1,4 @@
+{
+  "available": false,
+  "reason": "No REST endpoint \u2014 only available via Digitraffic MQTT stream (wss://meri.digitraffic.fi/mqtt, topic: meri-aton/#)"
+}

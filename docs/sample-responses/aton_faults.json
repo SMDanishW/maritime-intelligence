@@ -1,0 +1,90 @@
+{
+  "type": "FeatureCollection",
+  "lastUpdated": "2026-05-27T22:09:01.329Z",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": -2139941822,
+        "entry_timestamp": "2023-10-11T01:19:20.000Z",
+        "fixed_timestamp": null,
+        "type": "Unlit",
+        "domain": "C_NA",
+        "state": "Open",
+        "fixed": false,
+        "aton_id": 170,
+        "aton_name_fi": "Merikari",
+        "aton_name_sv": "Merikari",
+        "aton_type": "Ramark",
+        "fairway_number": 5864,
+        "fairway_name_fi": "Rankin Kivikarin pohjoispuolen väylä",
+        "fairway_name_sv": "Rankis Kivikaris norra farled",
+        "area_number": 5,
+        "area_description": "Gulf of Finland"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          27.0896030604,
+          60.351989282
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": -2139942325,
+        "entry_timestamp": "2023-08-09T15:28:09.000Z",
+        "fixed_timestamp": null,
+        "type": "Damaged",
+        "domain": "NC_NA",
+        "state": "Open",
+        "fixed": false,
+        "aton_id": 24778,
+        "aton_name_fi": "Kervilänvirta 2",
+        "aton_name_sv": "Kervilänvirta 2",
+        "aton_type": "Spar buoy",
+        "fairway_number": 6400,
+        "fairway_name_fi": "Haapaselkä - Hakovirta - Vekara väylä",
+        "fairway_name_sv": "Haapaselkä - Hakovirta - Vekara väylä",
+        "area_number": 7,
+        "area_description": "Vuoksi watercourse"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          28.4514474642,
+          61.740804942400004
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": -2139953396,
+        "entry_timestamp": "2020-05-14T06:29:20.000Z",
+        "fixed_timestamp": null,
+        "type": "Destroyed/Missing",
+        "domain": "C_NA",
+        "state": "Open",
+        "fixed": false,
+        "aton_id": 58961,
+        "aton_name_fi": "Vanhakaupunki 5",
+        "aton_name_sv": "Gammelstaden 5",
+        "aton_type": "Spar buoy",
+        "fairway_number": 5960,
+        "fairway_name_fi": "Luonnonsuojelualueet",
+        "fairway_name_sv": "Luonnonsuojelualueet",
+        "area_number": 5,
+        "area_description": "Gulf of Finland"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          25.0012269662,
+          60.2052416621
+        ]
+      }
+    }
+  ]
+}

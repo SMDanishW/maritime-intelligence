@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: maritime-config
+  namespace: maritime
+data:
+  APP_ENV: "production"
+  LOG_LEVEL: "info"
+  DATABASE_URL: "postgresql+asyncpg://marine:marine@postgres-svc:5432/marine_traffic"
+  REDIS_URL: "redis://redis-svc:6379/0"
+  CACHE_TTL_SECONDS: "60"
+  DIGITRAFFIC_BASE_URL: "https://meri.digitraffic.fi"
+  DIGITRAFFIC_TIMEOUT_SECONDS: "10"
+  DIGITRAFFIC_RETRY_ATTEMPTS: "3"
+  GROQ_MODEL: "llama-3.3-70b-versatile"
+  RISK_WEIGHT_VESSEL_DENSITY: "25"
+  RISK_WEIGHT_PORT_CONGESTION: "20"
+  RISK_WEIGHT_SEA_STATE: "25"
+  RISK_WEIGHT_ATON_FAULTS: "15"
+  RISK_WEIGHT_WINTER_NAVIGATION: "15"
+  # Frontend proxy target (Next.js server-side only)
+  BACKEND_URL: "http://backend-svc:8000"

@@ -1,0 +1,59 @@
+{
+  "lastUpdated": "2026-05-27T22:05:40.638Z",
+  "vessels": [
+    {
+      "name": "VOIMA",
+      "callSign": "OHLW",
+      "shortcode": "VOA",
+      "mmsi": 230291000,
+      "imo": 5383158,
+      "type": "Icebreaker",
+      "activities": [
+        {
+          "type": "STOP",
+          "reason": null,
+          "publicComment": null,
+          "startTime": "2026-04-17T07:55:00+00:00",
+          "endTime": "2026-05-31T21:00:00+00:00"
+        }
+      ],
+      "plannedAssistances": []
+    },
+    {
+      "name": "FENNICA",
+      "callSign": "OJAD",
+      "shortcode": "FEN",
+      "mmsi": 230245000,
+      "imo": 9043615,
+      "type": "Icebreaker",
+      "activities": [
+        {
+          "type": "STOP",
+          "reason": null,
+          "publicComment": null,
+          "startTime": "2026-05-17T18:36:00+00:00",
+          "endTime": "2026-05-31T21:00:00+00:00"
+        }
+      ],
+      "plannedAssistances": []
+    },
+    {
+      "name": "ZEUS OF FINLAND",
+      "callSign": "5BSP4",
+      "shortcode": "ZEU",
+      "mmsi": 212409000,
+      "imo": 9130729,
+      "type": "Icebreaker",
+      "activities": [
+        {
+          "type": "STOP",
+          "reason": null,
+          "publicComment": null,
+          "startTime": "2026-05-06T07:00:00+00:00",
+          "endTime": "2026-05-31T21:00:00+00:00"
+        }
+      ],
+      "plannedAssistances": []
+    }
+  ]
+}

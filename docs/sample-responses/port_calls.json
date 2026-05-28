@@ -1,0 +1,296 @@
+{
+  "dataUpdatedTime": "2026-05-27T21:51:00.079353Z",
+  "portCalls": [
+    {
+      "portCallId": 3281757,
+      "portCallTimestamp": "2026-05-27T19:27:46.000Z",
+      "customsReference": "0/737935",
+      "portToVisit": "FIHEL",
+      "prevPort": "NLDOR",
+      "nextPort": "NLDOR",
+      "domesticTrafficArrival": false,
+      "domesticTrafficDeparture": false,
+      "arrivalWithCargo": true,
+      "notLoading": true,
+      "discharge": 3,
+      "shipMasterArrival": "",
+      "shipMasterDeparture": "",
+      "managementNameArrival": " ",
+      "managementNameDeparture": " ",
+      "forwarderNameArrival": "Suomen Vesityö Oy",
+      "forwarderNameDeparture": " ",
+      "freeTextArrival": " ",
+      "freeTextDeparture": " ",
+      "vesselName": "B801",
+      "vesselNamePrefix": " ",
+      "radioCallSign": "NLNA",
+      "radioCallSignType": "fake",
+      "imoLloyds": null,
+      "mmsi": 0,
+      "nationality": "NL",
+      "vesselTypeCode": 93,
+      "certificateIssuer": "Ei tiedossa",
+      "certificateStartDate": "0999-12-26T22:21:00.000Z",
+      "certificateEndDate": "9998-12-31T22:00:00.000Z",
+      "currentSecurityLevel": 1,
+      "agentInfo": [
+        {
+          "ediNumber": null,
+          "name": "Suomen Vesityö Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 2
+        },
+        {
+          "ediNumber": "003715403793",
+          "name": "Oy Nordic Transit Ab",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 1
+        }
+      ],
+      "imoInformation": [
+        {
+          "briefParticularsVoyage": "Dordrecht- Kielin kanava - Helsinki",
+          "cargoDeclarationOb": 0,
+          "crewListsOb": 1,
+          "crewsEffectsDeclarationsOb": 1,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Arrival",
+          "numberOfCrew": 4,
+          "numberOfPassangers": 0,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 1
+        },
+        {
+          "briefParticularsVoyage": "Dordrecht- Kielin kanava - Helsinki",
+          "cargoDeclarationOb": 0,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Departure",
+          "numberOfCrew": 4,
+          "numberOfPassangers": 0,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        }
+      ],
+      "portAreaDetails": [
+        {
+          "arrivalDraught": 2.6,
+          "ata": "2025-09-02T11:00:00.000Z",
+          "ataSource": "Agent",
+          "ataTimestamp": "2025-09-02T12:27:48.138Z",
+          "atd": null,
+          "atdSource": null,
+          "atdTimestamp": null,
+          "berthCode": "MUU",
+          "berthName": "Ei tiedossa",
+          "departureDraught": 2.6,
+          "eta": "2025-09-02T10:00:00.000Z",
+          "etaSource": "Agent",
+          "etaTimestamp": "2025-09-01T18:15:40.514Z",
+          "etd": "2026-05-29T12:00:00.000Z",
+          "etdSource": "Agent",
+          "etdTimestamp": "2026-05-27T19:27:46.719Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 3295352,
+      "portCallTimestamp": "2026-05-27T05:36:36.000Z",
+      "customsReference": "0/740151",
+      "portToVisit": "FIHEL",
+      "prevPort": "FIRAU",
+      "nextPort": "FIRAU",
+      "domesticTrafficArrival": true,
+      "domesticTrafficDeparture": true,
+      "arrivalWithCargo": true,
+      "notLoading": true,
+      "discharge": 4,
+      "shipMasterArrival": "",
+      "shipMasterDeparture": "",
+      "managementNameArrival": " ",
+      "managementNameDeparture": " ",
+      "forwarderNameArrival": " ",
+      "forwarderNameDeparture": " ",
+      "freeTextArrival": " ",
+      "freeTextDeparture": " ",
+      "vesselName": "Tuikku",
+      "vesselNamePrefix": "pr",
+      "radioCallSign": "TUIKKU",
+      "radioCallSignType": "real",
+      "imoLloyds": 8692562,
+      "mmsi": 0,
+      "nationality": "FI",
+      "vesselTypeCode": 93,
+      "certificateIssuer": "Ei ole tiedossa",
+      "certificateStartDate": "0999-12-26T22:21:00.000Z",
+      "certificateEndDate": "9999-12-30T22:00:00.000Z",
+      "currentSecurityLevel": 1,
+      "agentInfo": [
+        {
+          "ediNumber": null,
+          "name": "Kaplaaki Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 2
+        },
+        {
+          "ediNumber": "003714757864",
+          "name": "Finnish Sea Service Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 1
+        }
+      ],
+      "imoInformation": [
+        {
+          "briefParticularsVoyage": "Rauma-Helsinki\r Tuikku proomu jää Makasiinilaiturin työmaalle toistaiseksi. \r Saapuu Kemi 1 hinaajan avustamana Helsinkiin",
+          "cargoDeclarationOb": 0,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Arrival",
+          "numberOfCrew": 2,
+          "numberOfPassangers": 0,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        },
+        {
+          "briefParticularsVoyage": "Rauma-Helsinki\r Tuikku proomu jää Makasiinilaiturin työmaalle toistaiseksi. \r Saapuu Kemi 1 hinaajan avustamana Helsinkiin",
+          "cargoDeclarationOb": 0,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Departure",
+          "numberOfCrew": 2,
+          "numberOfPassangers": 0,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        }
+      ],
+      "portAreaDetails": [
+        {
+          "arrivalDraught": 0.0,
+          "ata": "2025-10-15T18:15:00.000Z",
+          "ataSource": "Port",
+          "ataTimestamp": "2025-10-15T18:38:03.000Z",
+          "atd": null,
+          "atdSource": null,
+          "atdTimestamp": null,
+          "berthCode": "EMA",
+          "berthName": "Makasiinilaituri A",
+          "departureDraught": 0.0,
+          "eta": "2025-10-15T16:30:00.000Z",
+          "etaSource": "Agent",
+          "etaTimestamp": "2025-10-15T05:51:37.230Z",
+          "etd": "2026-05-29T10:00:00.000Z",
+          "etdSource": "Agent",
+          "etdTimestamp": "2026-05-27T05:36:36.497Z",
+          "portAreaCode": "ES",
+          "portAreaName": "Eteläsatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 3319200,
+      "portCallTimestamp": "2026-05-27T10:43:53.000Z",
+      "customsReference": "0/744158",
+      "portToVisit": "FIECK",
+      "prevPort": "SEGRH",
+      "nextPort": "SEGRH",
+      "domesticTrafficArrival": false,
+      "domesticTrafficDeparture": false,
+      "arrivalWithCargo": true,
+      "notLoading": false,
+      "discharge": 1,
+      "shipMasterArrival": "",
+      "shipMasterDeparture": "",
+      "managementNameArrival": " ",
+      "managementNameDeparture": " ",
+      "forwarderNameArrival": " ",
+      "forwarderNameDeparture": " ",
+      "freeTextArrival": " ",
+      "freeTextDeparture": " ",
+      "vesselName": "Eckerö",
+      "vesselNamePrefix": "ms",
+      "radioCallSign": "SBJU",
+      "radioCallSignType": "real",
+      "imoLloyds": 7633155,
+      "mmsi": 266308000,
+      "nationality": "SE",
+      "vesselTypeCode": 20,
+      "certificateIssuer": "SE/BV",
+      "certificateStartDate": "2024-02-27T22:00:00.000Z",
+      "certificateEndDate": "2029-03-15T22:00:00.000Z",
+      "currentSecurityLevel": 1,
+      "agentInfo": [
+        {
+          "ediNumber": "003719740738",
+          "name": "Eckerö Linjen Ab",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 1
+        },
+        {
+          "ediNumber": null,
+          "name": "Rederiaktiebolaget Eckerö.",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 2
+        }
+      ],
+      "imoInformation": [
+        {
+          "briefParticularsVoyage": "eck-gri-eck",
+          "cargoDeclarationOb": 1,
+          "crewListsOb": 1,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Departure",
+          "numberOfCrew": 100,
+          "numberOfPassangers": 455,
+          "passangerListsOb": 1,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        },
+        {
+          "briefParticularsVoyage": "eck-gri-eck",
+          "cargoDeclarationOb": 1,
+          "crewListsOb": 1,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Arrival",
+          "numberOfCrew": 98,
+          "numberOfPassangers": 561,
+          "passangerListsOb": 1,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        }
+      ],
+      "portAreaDetails": [
+        {
+          "arrivalDraught": 0.0,
+          "ata": "2026-05-27T10:00:00.000Z",
+          "ataSource": "Agent",
+          "ataTimestamp": "2026-05-27T10:37:06.500Z",
+          "atd": "2026-05-27T10:30:00.000Z",
+          "atdSource": "Agent",
+          "atdTimestamp": "2026-05-27T10:40:24.483Z",
+          "berthCode": "MUU",
+          "berthName": "Ei tiedossa",
+          "departureDraught": 0.0,
+          "eta": "2026-05-27T10:00:00.000Z",
+          "etaSource": "Agent",
+          "etaTimestamp": "2025-12-28T08:43:55.148Z",
+          "etd": "2026-05-27T10:30:00.000Z",
+          "etdSource": "Agent",
+          "etdTimestamp": "2025-12-28T08:43:55.148Z",
+          "portAreaCode": "MUU",
+          "portAreaName": "Ei tiedossa"
+        }
+      ]
+    }
+  ]
+}

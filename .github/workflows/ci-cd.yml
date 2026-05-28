@@ -1,0 +1,105 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend: lint + test ──────────────────────────────────────────────────────
+  backend-ci:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install -r backend/requirements-dev.txt
+      - name: Lint
+        run: ruff check backend/app/ backend/tests/
+      - name: Test
+        run: pytest backend/tests/ -v
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: ""          # DB tests skipped without postgres
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+  # ── Frontend: type-check + build ─────────────────────────────────────────────
+  frontend-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx tsc --noEmit
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  # ── Build images → ECR → deploy to EKS (main branch only) ────────────────────
+  deploy:
+    needs: [backend-ci, frontend-ci]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build & push backend
+        run: |
+          docker build -t $ECR_REGISTRY/marine-backend:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/marine-backend:latest \
+                       ./backend
+          docker push $ECR_REGISTRY/marine-backend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/marine-backend:latest
+
+      - name: Build & push frontend
+        run: |
+          docker build -t $ECR_REGISTRY/marine-frontend:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/marine-frontend:latest \
+                       ./frontend
+          docker push $ECR_REGISTRY/marine-frontend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/marine-frontend:latest
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ secrets.EKS_CLUSTER_NAME }} \
+            --region $AWS_REGION
+
+      - name: Deploy to EKS
+        run: |
+          kubectl set image deployment/backend \
+            backend=$ECR_REGISTRY/marine-backend:$IMAGE_TAG \
+            -n maritime
+          kubectl set image deployment/frontend \
+            frontend=$ECR_REGISTRY/marine-frontend:$IMAGE_TAG \
+            -n maritime
+          kubectl rollout status deployment/backend -n maritime --timeout=120s
+          kubectl rollout status deployment/frontend -n maritime --timeout=120s

@@ -1,0 +1,75 @@
+{
+  "type": "FeatureCollection",
+  "dataUpdatedTime": "2026-05-27T22:12:03Z",
+  "features": [
+    {
+      "mmsi": 219598000,
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          20.85169,
+          55.770832
+        ]
+      },
+      "properties": {
+        "mmsi": 219598000,
+        "sog": 0.1,
+        "cog": 346.5,
+        "navStat": 1,
+        "rot": 4,
+        "posAcc": true,
+        "raim": true,
+        "heading": 79,
+        "timestamp": 59,
+        "timestampExternal": 1659212938646
+      }
+    },
+    {
+      "mmsi": 376128000,
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          19.612433,
+          59.1802
+        ]
+      },
+      "properties": {
+        "mmsi": 376128000,
+        "sog": 6.5,
+        "cog": 205.7,
+        "navStat": 3,
+        "rot": 0,
+        "posAcc": true,
+        "raim": false,
+        "heading": 205,
+        "timestamp": 28,
+        "timestampExternal": 1638940711289
+      }
+    },
+    {
+      "mmsi": 273274000,
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          30.190985,
+          59.886713
+        ]
+      },
+      "properties": {
+        "mmsi": 273274000,
+        "sog": 5.3,
+        "cog": 74.9,
+        "navStat": 0,
+        "rot": 0,
+        "posAcc": true,
+        "raim": true,
+        "heading": 76,
+        "timestamp": 45,
+        "timestampExternal": 1539814847556
+      }
+    }
+  ]
+}

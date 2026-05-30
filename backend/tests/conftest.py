@@ -1,4 +1,5 @@
 import pytest
+from httpx import AsyncClient, ASGITransport
 import app.services.cache as _cache_module
 
 
@@ -15,3 +16,10 @@ async def reset_redis_pool():
     _cache_module._pool = None
     yield
     _cache_module._pool = None
+
+
+@pytest.fixture
+async def client():
+    from app.main import app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c

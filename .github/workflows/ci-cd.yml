@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ── Backend: lint + test ──────────────────────────────────────────────────────
   backend-ci:
@@ -132,9 +135,15 @@ jobs:
             --set region=$AWS_REGION \
             --set replicaCount=1
 
-          # Wait for controller and its webhook to be fully ready
-          kubectl rollout status deployment/aws-load-balancer-controller \
-            -n kube-system --timeout=180s
+          # Force-delete any stuck old pods so termination doesn't block
+          kubectl delete pods -n kube-system \
+            -l app.kubernetes.io/name=aws-load-balancer-controller \
+            --force --grace-period=0 2>/dev/null || true
+
+          # Wait for at least 1 new pod to be Ready (doesn't block on old pod termination)
+          kubectl wait pod -n kube-system \
+            -l app.kubernetes.io/name=aws-load-balancer-controller \
+            --for=condition=Ready --timeout=120s
 
       - name: Debug ALB controller (runs only on failure)
         if: failure()

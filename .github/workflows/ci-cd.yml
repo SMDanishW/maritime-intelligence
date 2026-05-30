@@ -111,14 +111,8 @@ jobs:
             # eksctl works for both managed AND unmanaged nodegroups
             NODEGROUP=$(eksctl get nodegroup \
               --cluster $CLUSTER_NAME --region $AWS_REGION -o json 2>/dev/null \
-              | python3 -c "
-            import sys, json
-            try:
-                ngs = json.load(sys.stdin)
-                print(ngs[0]['Name'] if ngs else '')
-            except:
-                print('')
-            ")
+              | python3 -c "import sys,json; ngs=json.load(sys.stdin); print(ngs[0]['Name'] if ngs else '')" \
+              2>/dev/null || echo "")
                         echo "Nodegroup found: '$NODEGROUP'"
 
             if [ -n "$NODEGROUP" ]; then

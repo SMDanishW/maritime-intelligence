@@ -114,22 +114,27 @@ jobs:
             echo "Nodegroup: $NODEGROUP"
 
             if [ -z "$NODEGROUP" ] || [ "$NODEGROUP" = "None" ]; then
-              echo "ERROR: No nodegroup found. Please create one manually in the AWS Console."
-              exit 1
+              echo "No nodegroup found — creating one..."
+              eksctl create nodegroup \
+                --cluster $CLUSTER_NAME --region $AWS_REGION \
+                --name standard \
+                --node-type t3.medium \
+                --nodes 2 --nodes-min 2 --nodes-max 4 \
+                --managed
+            else
+              # Scale the existing nodegroup's ASG directly
+              ASG_NAME=$(aws eks describe-nodegroup \
+                --cluster-name $CLUSTER_NAME \
+                --nodegroup-name "$NODEGROUP" \
+                --region $AWS_REGION \
+                --query "nodegroup.resources.autoScalingGroups[0].name" \
+                --output text)
+              echo "Scaling ASG: $ASG_NAME → desired 2"
+              aws autoscaling update-auto-scaling-group \
+                --auto-scaling-group-name "$ASG_NAME" \
+                --min-size 2 --max-size 4 --desired-capacity 2 \
+                --region $AWS_REGION
             fi
-
-            # Scale the ASG directly — avoids CloudFormation stack conflicts
-            ASG_NAME=$(aws eks describe-nodegroup \
-              --cluster-name $CLUSTER_NAME \
-              --nodegroup-name "$NODEGROUP" \
-              --region $AWS_REGION \
-              --query "nodegroup.resources.autoScalingGroups[0].name" \
-              --output text)
-            echo "Scaling ASG: $ASG_NAME → desired 2"
-            aws autoscaling update-auto-scaling-group \
-              --auto-scaling-group-name "$ASG_NAME" \
-              --min-size 2 --max-size 4 --desired-capacity 2 \
-              --region $AWS_REGION
 
             echo "Waiting up to 10 min for nodes to be Ready..."
             kubectl wait nodes --all --for=condition=Ready --timeout=600s

@@ -1,4 +1,3 @@
-import asyncio
 from fastapi import APIRouter, Query
 
 from app.services.cache import cache_get, cache_set

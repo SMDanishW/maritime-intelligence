@@ -102,30 +102,34 @@ jobs:
           echo "=== Current nodes ==="
           kubectl get nodes
 
-          # If no Ready nodes exist, scale up the nodegroup
           READY=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || true)
           echo "Ready node count: $READY"
 
           if [ "$READY" -eq 0 ]; then
-            echo "No ready nodes — checking nodegroups..."
-            NODEGROUP=$(eksctl get nodegroup \
-              --cluster $CLUSTER_NAME --region $AWS_REGION --output json \
-              | python3 -c "import sys,json; ngs=json.load(sys.stdin); print(ngs[0]['Name'] if ngs else '')" 2>/dev/null || echo "")
+            echo "No ready nodes — finding nodegroup..."
 
-            if [ -n "$NODEGROUP" ]; then
-              echo "Scaling nodegroup '$NODEGROUP' back to 2 nodes..."
-              eksctl scale nodegroup \
-                --cluster $CLUSTER_NAME --region $AWS_REGION \
-                --name "$NODEGROUP" --nodes 2 --nodes-min 2 --nodes-max 4
-            else
-              echo "No nodegroup found — creating one..."
-              eksctl create nodegroup \
-                --cluster $CLUSTER_NAME --region $AWS_REGION \
-                --name standard \
-                --node-type t3.medium \
-                --nodes 2 --nodes-min 2 --nodes-max 4 \
-                --managed
+            NODEGROUP=$(aws eks list-nodegroups \
+              --cluster-name $CLUSTER_NAME --region $AWS_REGION \
+              --query "nodegroups[0]" --output text 2>/dev/null || echo "")
+            echo "Nodegroup: $NODEGROUP"
+
+            if [ -z "$NODEGROUP" ] || [ "$NODEGROUP" = "None" ]; then
+              echo "ERROR: No nodegroup found. Please create one manually in the AWS Console."
+              exit 1
             fi
+
+            # Scale the ASG directly — avoids CloudFormation stack conflicts
+            ASG_NAME=$(aws eks describe-nodegroup \
+              --cluster-name $CLUSTER_NAME \
+              --nodegroup-name "$NODEGROUP" \
+              --region $AWS_REGION \
+              --query "nodegroup.resources.autoScalingGroups[0].name" \
+              --output text)
+            echo "Scaling ASG: $ASG_NAME → desired 2"
+            aws autoscaling update-auto-scaling-group \
+              --auto-scaling-group-name "$ASG_NAME" \
+              --min-size 2 --max-size 4 --desired-capacity 2 \
+              --region $AWS_REGION
 
             echo "Waiting up to 10 min for nodes to be Ready..."
             kubectl wait nodes --all --for=condition=Ready --timeout=600s

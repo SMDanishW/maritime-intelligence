@@ -112,14 +112,14 @@ jobs:
             NODEGROUP=$(eksctl get nodegroup \
               --cluster $CLUSTER_NAME --region $AWS_REGION -o json 2>/dev/null \
               | python3 -c "
-import sys, json
-try:
-    ngs = json.load(sys.stdin)
-    print(ngs[0]['Name'] if ngs else '')
-except:
-    print('')
-")
-            echo "Nodegroup found: '$NODEGROUP'"
+            import sys, json
+            try:
+                ngs = json.load(sys.stdin)
+                print(ngs[0]['Name'] if ngs else '')
+            except:
+                print('')
+            ")
+                        echo "Nodegroup found: '$NODEGROUP'"
 
             if [ -n "$NODEGROUP" ]; then
               echo "Scaling nodegroup '$NODEGROUP' to 2 nodes..."

@@ -208,7 +208,7 @@ jobs:
           echo "=== Logs ==="
           kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller --tail=50 --all-containers 2>/dev/null || echo "no logs"
           echo "=== Node capacity ==="
-          kubectl top nodes 2>/dev/null || kubectl describe nodes | grep -A 4 "Allocated resources"
+          kubectl top nodes 2>/dev/null || kubectl describe nodes | grep -A 4 "Allocated resources" || echo "no nodes found"
 
       - name: Apply base k8s manifests (idempotent)
         run: |

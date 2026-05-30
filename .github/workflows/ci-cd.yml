@@ -101,52 +101,57 @@ jobs:
           set -euo pipefail
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
 
-          echo "=== Existing nodegroups ==="
-          eksctl get nodegroup --cluster "$CLUSTER_NAME" --region "$AWS_REGION" || true
+          echo "=== Cluster status ==="
+          aws eks describe-cluster --name "$CLUSTER_NAME" --region "$AWS_REGION" \
+            --query "cluster.{status:status,version:version}" --output json
 
-          NODEGROUP=$(eksctl get nodegroup \
-            --cluster "$CLUSTER_NAME" --region "$AWS_REGION" -o json 2>/dev/null \
-            | python3 -c "import sys,json; ngs=json.load(sys.stdin); print(ngs[0]['Name'] if ngs else '')" \
-            || echo "")
-          echo "Nodegroup: '$NODEGROUP'"
+          echo "=== Managed nodegroups (AWS CLI source of truth) ==="
+          aws eks list-nodegroups --cluster-name "$CLUSTER_NAME" --region "$AWS_REGION"
 
-          if [ -z "$NODEGROUP" ]; then
-            echo "No nodegroup found — creating managed nodegroup..."
+          # Use AWS CLI — only returns MANAGED nodegroups (not CF-backed unmanaged ones)
+          NODEGROUP=$(aws eks list-nodegroups \
+            --cluster-name "$CLUSTER_NAME" --region "$AWS_REGION" \
+            --query "nodegroups[0]" --output text 2>/dev/null || echo "None")
+          echo "Managed nodegroup: '$NODEGROUP'"
+
+          if [ "$NODEGROUP" = "None" ] || [ -z "$NODEGROUP" ]; then
+            echo "No managed nodegroup — creating 'managed-workers'..."
             eksctl create nodegroup \
               --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
-              --name standard \
+              --name managed-workers \
               --node-type t3.medium \
               --nodes 2 --nodes-min 2 --nodes-max 4 \
               --managed
-            NODEGROUP="standard"
+            NODEGROUP="managed-workers"
           else
-            echo "Scaling nodegroup '$NODEGROUP' to 2 nodes..."
-            eksctl scale nodegroup \
-              --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
-              --name "$NODEGROUP" \
-              --nodes 2 --nodes-min 2 --nodes-max 4 || true
+            DESIRED=$(aws eks describe-nodegroup \
+              --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+              --query "nodegroup.scalingConfig.desiredSize" --output text 2>/dev/null || echo "0")
+            echo "Current desired size: $DESIRED"
+            if [ "$DESIRED" -lt 2 ]; then
+              echo "Scaling up to 2 nodes via AWS CLI..."
+              aws eks update-nodegroup-config \
+                --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+                --scaling-config minSize=2,maxSize=4,desiredSize=2
+            fi
           fi
 
-          echo "=== Waiting for EKS nodegroup to become ACTIVE ==="
+          echo "=== Waiting for nodegroup '$NODEGROUP' to become ACTIVE ==="
           aws eks wait nodegroup-active \
             --cluster-name "$CLUSTER_NAME" \
             --nodegroup-name "$NODEGROUP" \
             --region "$AWS_REGION" || {
               echo "Nodegroup did not become ACTIVE — diagnostics:"
               aws eks describe-nodegroup \
-                --cluster-name "$CLUSTER_NAME" \
-                --nodegroup-name "$NODEGROUP" \
-                --region "$AWS_REGION" \
+                --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
                 --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole,subnets:subnets}" \
                 --output json
               exit 1
             }
 
-          echo "=== Nodegroup diagnostics ==="
+          echo "=== Nodegroup status ==="
           aws eks describe-nodegroup \
-            --cluster-name "$CLUSTER_NAME" \
-            --nodegroup-name "$NODEGROUP" \
-            --region "$AWS_REGION" \
+            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
             --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole}" \
             --output json
 

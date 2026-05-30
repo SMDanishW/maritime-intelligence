@@ -27,7 +27,7 @@ jobs:
         run: pytest backend/tests/ -v
         env:
           REDIS_URL: redis://localhost:6379/0
-          DATABASE_URL: ""          # DB tests skipped without postgres
+          DATABASE_URL: ""
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
   # ── Frontend: type-check + build ─────────────────────────────────────────────
@@ -47,16 +47,111 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
-  # ── Build images → ECR → deploy to EKS (main branch only) ────────────────────
-  deploy:
+  # ── Bootstrap: ECR + EKS cluster + ALB controller (skips if already exists) ──
+  bootstrap:
     needs: [backend-ci, frontend-ci]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install eksctl
+        run: |
+          curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+          tar -xzf eksctl_Linux_amd64.tar.gz
+          sudo mv eksctl /usr/local/bin
+
+      - name: Create ECR repos (idempotent)
+        run: |
+          aws ecr describe-repositories --repository-names marine-backend 2>/dev/null || \
+            aws ecr create-repository --repository-name marine-backend
+          aws ecr describe-repositories --repository-names marine-frontend 2>/dev/null || \
+            aws ecr create-repository --repository-name marine-frontend
+
+      - name: Create EKS cluster (skip if exists)
+        run: |
+          if eksctl get cluster --name $CLUSTER_NAME --region $AWS_REGION 2>/dev/null; then
+            echo "Cluster already exists — skipping"
+          else
+            eksctl create cluster \
+              --name $CLUSTER_NAME \
+              --region $AWS_REGION \
+              --nodegroup-name standard \
+              --node-type t3.medium \
+              --nodes 2 --nodes-min 2 --nodes-max 4 \
+              --managed
+          fi
+
+      - name: Install AWS Load Balancer Controller (skip if exists)
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+          # IAM policy (idempotent)
+          curl -sLo alb-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+          aws iam create-policy \
+            --policy-name AWSLoadBalancerControllerIAMPolicy \
+            --policy-document file://alb-policy.json 2>/dev/null || echo "Policy already exists"
+
+          # IRSA + service account (idempotent)
+          eksctl utils associate-iam-oidc-provider \
+            --cluster $CLUSTER_NAME --region $AWS_REGION --approve
+
+          eksctl create iamserviceaccount \
+            --cluster $CLUSTER_NAME \
+            --namespace kube-system \
+            --name aws-load-balancer-controller \
+            --attach-policy-arn arn:aws:iam::$AWS_ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy \
+            --approve --override-existing-serviceaccounts 2>/dev/null || true
+
+          # Helm install (idempotent)
+          helm repo add eks https://aws.github.io/eks-charts 2>/dev/null || true
+          helm repo update
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --set clusterName=$CLUSTER_NAME \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=aws-load-balancer-controller
+
+      - name: Apply base k8s manifests (idempotent)
+        run: |
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+
+          # Create secret only if it doesn't exist
+          kubectl get secret maritime-secret -n maritime 2>/dev/null || \
+            kubectl create secret generic maritime-secret \
+              --from-literal=POSTGRES_PASSWORD=marine \
+              --from-literal=GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
+              -n maritime
+
+          kubectl apply -f k8s/postgres/
+          kubectl apply -f k8s/redis/
+          kubectl apply -f k8s/backend/service.yaml
+          kubectl apply -f k8s/frontend/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+  # ── Deploy: build images → push ECR → roll out to EKS ───────────────────────
+  deploy:
+    needs: [bootstrap]
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
       ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
       IMAGE_TAG: ${{ github.sha }}
-
+      CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
     steps:
       - uses: actions/checkout@v4
 
@@ -69,37 +164,40 @@ jobs:
 
       - name: Login to ECR
         run: |
-          aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REGISTRY
+          aws ecr get-login-password | \
+            docker login --username AWS --password-stdin $ECR_REGISTRY
 
       - name: Build & push backend
         run: |
           docker build -t $ECR_REGISTRY/marine-backend:$IMAGE_TAG \
-                       -t $ECR_REGISTRY/marine-backend:latest \
-                       ./backend
+                       -t $ECR_REGISTRY/marine-backend:latest ./backend
           docker push $ECR_REGISTRY/marine-backend:$IMAGE_TAG
           docker push $ECR_REGISTRY/marine-backend:latest
 
       - name: Build & push frontend
         run: |
           docker build -t $ECR_REGISTRY/marine-frontend:$IMAGE_TAG \
-                       -t $ECR_REGISTRY/marine-frontend:latest \
-                       ./frontend
+                       -t $ECR_REGISTRY/marine-frontend:latest ./frontend
           docker push $ECR_REGISTRY/marine-frontend:$IMAGE_TAG
           docker push $ECR_REGISTRY/marine-frontend:latest
 
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig \
-            --name ${{ secrets.EKS_CLUSTER_NAME }} \
-            --region $AWS_REGION
-
       - name: Deploy to EKS
         run: |
-          kubectl set image deployment/backend \
-            backend=$ECR_REGISTRY/marine-backend:$IMAGE_TAG \
-            -n maritime
-          kubectl set image deployment/frontend \
-            frontend=$ECR_REGISTRY/marine-frontend:$IMAGE_TAG \
-            -n maritime
-          kubectl rollout status deployment/backend -n maritime --timeout=120s
-          kubectl rollout status deployment/frontend -n maritime --timeout=120s
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+          # Apply deployments with real image URLs substituted
+          BACKEND_IMAGE=$ECR_REGISTRY/marine-backend:$IMAGE_TAG
+          FRONTEND_IMAGE=$ECR_REGISTRY/marine-frontend:$IMAGE_TAG
+
+          sed "s|\${BACKEND_IMAGE}|$BACKEND_IMAGE|g" k8s/backend/deployment.yaml | kubectl apply -f -
+          sed "s|\${FRONTEND_IMAGE}|$FRONTEND_IMAGE|g" k8s/frontend/deployment.yaml | kubectl apply -f -
+
+          kubectl rollout status deployment/backend -n maritime --timeout=180s
+          kubectl rollout status deployment/frontend -n maritime --timeout=180s
+
+      - name: Print public URL
+        run: |
+          echo "Waiting for ALB..."
+          sleep 30
+          kubectl get ingress maritime-ingress -n maritime \
+            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'

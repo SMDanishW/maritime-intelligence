@@ -98,55 +98,72 @@ jobs:
 
       - name: Ensure worker nodes are ready
         run: |
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
-          echo "=== Current nodes ==="
-          kubectl get nodes || true
+          set -euo pipefail
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
 
-          READY=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || true)
-          echo "Ready node count: $READY"
+          echo "=== Existing nodegroups ==="
+          eksctl get nodegroup --cluster "$CLUSTER_NAME" --region "$AWS_REGION" || true
 
-          if [ "$READY" -eq 0 ]; then
-            echo "No ready nodes — checking nodegroups via eksctl..."
+          NODEGROUP=$(eksctl get nodegroup \
+            --cluster "$CLUSTER_NAME" --region "$AWS_REGION" -o json 2>/dev/null \
+            | python3 -c "import sys,json; ngs=json.load(sys.stdin); print(ngs[0]['Name'] if ngs else '')" \
+            || echo "")
+          echo "Nodegroup: '$NODEGROUP'"
 
-            # eksctl works for both managed AND unmanaged nodegroups
-            NODEGROUP=$(eksctl get nodegroup \
-              --cluster $CLUSTER_NAME --region $AWS_REGION -o json 2>/dev/null \
-              | python3 -c "import sys,json; ngs=json.load(sys.stdin); print(ngs[0]['Name'] if ngs else '')" \
-              2>/dev/null || echo "")
-                        echo "Nodegroup found: '$NODEGROUP'"
-
-            if [ -n "$NODEGROUP" ]; then
-              echo "Scaling nodegroup '$NODEGROUP' to 2 nodes..."
-              eksctl scale nodegroup \
-                --cluster $CLUSTER_NAME --region $AWS_REGION \
-                --name "$NODEGROUP" \
-                --nodes 2 --nodes-min 2 --nodes-max 4
-            else
-              echo "No nodegroup found — creating managed nodegroup..."
-              eksctl create nodegroup \
-                --cluster $CLUSTER_NAME --region $AWS_REGION \
-                --name standard \
-                --node-type t3.medium \
-                --nodes 2 --nodes-min 2 --nodes-max 4 \
-                --managed
-            fi
-
-            echo "Polling for Ready nodes (up to 10 min)..."
-            for i in $(seq 1 60); do
-              READY=$(kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || true)
-              echo "  attempt $i/60 — Ready nodes: $READY"
-              [ "$READY" -ge 1 ] && break
-              sleep 10
-            done
-            if [ "$READY" -lt 1 ]; then
-              echo "ERROR: No nodes became Ready after 10 minutes"
-              kubectl get nodes
-              exit 1
-            fi
-            echo "Nodes are Ready — proceeding."
+          if [ -z "$NODEGROUP" ]; then
+            echo "No nodegroup found — creating managed nodegroup..."
+            eksctl create nodegroup \
+              --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
+              --name standard \
+              --node-type t3.medium \
+              --nodes 2 --nodes-min 2 --nodes-max 4 \
+              --managed
+            NODEGROUP="standard"
           else
-            echo "Nodes are healthy — proceeding."
+            echo "Scaling nodegroup '$NODEGROUP' to 2 nodes..."
+            eksctl scale nodegroup \
+              --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
+              --name "$NODEGROUP" \
+              --nodes 2 --nodes-min 2 --nodes-max 4 || true
           fi
+
+          echo "=== Waiting for EKS nodegroup to become ACTIVE ==="
+          aws eks wait nodegroup-active \
+            --cluster-name "$CLUSTER_NAME" \
+            --nodegroup-name "$NODEGROUP" \
+            --region "$AWS_REGION" || {
+              echo "Nodegroup did not become ACTIVE — diagnostics:"
+              aws eks describe-nodegroup \
+                --cluster-name "$CLUSTER_NAME" \
+                --nodegroup-name "$NODEGROUP" \
+                --region "$AWS_REGION" \
+                --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole,subnets:subnets}" \
+                --output json
+              exit 1
+            }
+
+          echo "=== Nodegroup diagnostics ==="
+          aws eks describe-nodegroup \
+            --cluster-name "$CLUSTER_NAME" \
+            --nodegroup-name "$NODEGROUP" \
+            --region "$AWS_REGION" \
+            --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole}" \
+            --output json
+
+          echo "=== Polling Kubernetes nodes (up to 15 min) ==="
+          for i in $(seq 1 90); do
+            READY=$(kubectl get nodes --no-headers 2>/dev/null | awk '$2=="Ready"{c++} END{print c+0}')
+            echo "  attempt $i/90 — Ready nodes: $READY"
+            [ "$READY" -ge 1 ] && echo "Nodes are Ready — proceeding." && exit 0
+            sleep 10
+          done
+
+          echo "ERROR: No Kubernetes nodes became Ready after 15 minutes"
+          aws eks describe-nodegroup \
+            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+            --query "nodegroup.{status:status,health:health}" --output json
+          kubectl get nodes -o wide || true
+          exit 1
 
       - name: Install AWS Load Balancer Controller (skip if exists)
         run: |

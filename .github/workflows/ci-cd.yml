@@ -59,6 +59,7 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+      NODEGROUP_NAME: managed-workers
     steps:
       - uses: actions/checkout@v4
 
@@ -82,21 +83,19 @@ jobs:
           aws ecr describe-repositories --repository-names marine-frontend 2>/dev/null || \
             aws ecr create-repository --repository-name marine-frontend
 
-      - name: Create EKS cluster (skip if exists)
+      - name: Create EKS cluster (skip if exists, no nodegroup)
         run: |
-          if eksctl get cluster --name $CLUSTER_NAME --region $AWS_REGION 2>/dev/null; then
+          if eksctl get cluster --name "$CLUSTER_NAME" --region "$AWS_REGION" 2>/dev/null; then
             echo "Cluster already exists — skipping"
           else
             eksctl create cluster \
-              --name $CLUSTER_NAME \
-              --region $AWS_REGION \
-              --nodegroup-name standard \
-              --node-type t3.medium \
-              --nodes 2 --nodes-min 2 --nodes-max 4 \
-              --managed
+              --name "$CLUSTER_NAME" \
+              --region "$AWS_REGION" \
+              --without-nodegroup
           fi
 
       - name: Ensure worker nodes are ready
+        timeout-minutes: 45
         run: |
           set -euo pipefail
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
@@ -105,53 +104,85 @@ jobs:
           aws eks describe-cluster --name "$CLUSTER_NAME" --region "$AWS_REGION" \
             --query "cluster.{status:status,version:version}" --output json
 
-          echo "=== Managed nodegroups (AWS CLI source of truth) ==="
+          echo "=== All managed nodegroups ==="
           aws eks list-nodegroups --cluster-name "$CLUSTER_NAME" --region "$AWS_REGION"
 
-          # Use AWS CLI — only returns MANAGED nodegroups (not CF-backed unmanaged ones)
-          NODEGROUP=$(aws eks list-nodegroups \
+          # Explicitly check whether NODEGROUP_NAME exists (not nodegroups[0])
+          EXISTS=$(aws eks list-nodegroups \
             --cluster-name "$CLUSTER_NAME" --region "$AWS_REGION" \
-            --query "nodegroups[0]" --output text 2>/dev/null || echo "None")
-          echo "Managed nodegroup: '$NODEGROUP'"
+            --query "contains(nodegroups, '${NODEGROUP_NAME}')" \
+            --output text 2>/dev/null || echo "False")
+          echo "Nodegroup '${NODEGROUP_NAME}' exists: $EXISTS"
 
-          if [ "$NODEGROUP" = "None" ] || [ -z "$NODEGROUP" ]; then
-            echo "No managed nodegroup — creating 'managed-workers'..."
+          if [ "$EXISTS" != "True" ]; then
+            STACK_NAME="eksctl-${CLUSTER_NAME}-nodegroup-${NODEGROUP_NAME}"
+            echo "=== Cleaning up any failed CF stack: $STACK_NAME ==="
+            STACK_STATUS=$(aws cloudformation describe-stacks \
+              --stack-name "$STACK_NAME" --region "$AWS_REGION" \
+              --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+            echo "Stack status: $STACK_STATUS"
+
+            if [[ "$STACK_STATUS" =~ ^(ROLLBACK_COMPLETE|CREATE_FAILED|ROLLBACK_FAILED|DELETE_FAILED)$ ]]; then
+              echo "Removing termination protection and deleting failed stack..."
+              aws cloudformation update-termination-protection \
+                --stack-name "$STACK_NAME" --region "$AWS_REGION" \
+                --no-enable-termination-protection 2>/dev/null || true
+              aws cloudformation delete-stack \
+                --stack-name "$STACK_NAME" --region "$AWS_REGION"
+              aws cloudformation wait stack-delete-complete \
+                --stack-name "$STACK_NAME" --region "$AWS_REGION"
+              echo "Failed stack deleted."
+            fi
+
+            echo "Creating managed nodegroup '${NODEGROUP_NAME}'..."
             eksctl create nodegroup \
               --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
-              --name managed-workers \
+              --name "$NODEGROUP_NAME" \
               --node-type t3.medium \
               --nodes 2 --nodes-min 2 --nodes-max 4 \
-              --managed
-            NODEGROUP="managed-workers"
+              --managed || {
+                echo "=== CloudFormation failure events ==="
+                aws cloudformation describe-stack-events \
+                  --stack-name "$STACK_NAME" --region "$AWS_REGION" \
+                  --query "StackEvents[?contains('CREATE_FAILED ROLLBACK_IN_PROGRESS ROLLBACK_COMPLETE', ResourceStatus)].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
+                  --output table 2>/dev/null || true
+                exit 1
+              }
           else
             DESIRED=$(aws eks describe-nodegroup \
-              --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+              --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
               --query "nodegroup.scalingConfig.desiredSize" --output text 2>/dev/null || echo "0")
             echo "Current desired size: $DESIRED"
             if [ "$DESIRED" -lt 2 ]; then
-              echo "Scaling up to 2 nodes via AWS CLI..."
+              echo "Scaling up to 2 nodes..."
               aws eks update-nodegroup-config \
-                --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+                --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
                 --scaling-config minSize=2,maxSize=4,desiredSize=2
             fi
           fi
 
-          echo "=== Waiting for nodegroup '$NODEGROUP' to become ACTIVE ==="
+          echo "=== Verifying nodegroup exists before waiting ==="
+          aws eks describe-nodegroup \
+            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
+            --query "nodegroup.{status:status,scalingConfig:scalingConfig,nodeRole:nodeRole}" \
+            --output json
+
+          echo "=== Waiting for nodegroup to become ACTIVE ==="
           aws eks wait nodegroup-active \
             --cluster-name "$CLUSTER_NAME" \
-            --nodegroup-name "$NODEGROUP" \
+            --nodegroup-name "$NODEGROUP_NAME" \
             --region "$AWS_REGION" || {
               echo "Nodegroup did not become ACTIVE — diagnostics:"
               aws eks describe-nodegroup \
-                --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+                --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
                 --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole,subnets:subnets}" \
                 --output json
               exit 1
             }
 
-          echo "=== Nodegroup status ==="
+          echo "=== Nodegroup ACTIVE — final status ==="
           aws eks describe-nodegroup \
-            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
             --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole}" \
             --output json
 
@@ -165,7 +196,7 @@ jobs:
 
           echo "ERROR: No Kubernetes nodes became Ready after 15 minutes"
           aws eks describe-nodegroup \
-            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP" --region "$AWS_REGION" \
+            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
             --query "nodegroup.{status:status,health:health}" --output json
           kubectl get nodes -o wide || true
           exit 1

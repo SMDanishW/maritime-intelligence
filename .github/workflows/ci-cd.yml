@@ -95,7 +95,7 @@ jobs:
           fi
 
       - name: Ensure worker nodes are ready
-        timeout-minutes: 45
+        timeout-minutes: 60
         run: |
           set -euo pipefail
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
@@ -140,12 +140,26 @@ jobs:
               --name "$NODEGROUP_NAME" \
               --node-type t3.medium \
               --nodes 2 --nodes-min 2 --nodes-max 4 \
-              --managed || {
-                echo "=== CloudFormation failure events ==="
+              --managed \
+              --timeout 60m || {
+                echo "=== All CloudFormation stack events ==="
                 aws cloudformation describe-stack-events \
                   --stack-name "$STACK_NAME" --region "$AWS_REGION" \
-                  --query "StackEvents[?contains('CREATE_FAILED ROLLBACK_IN_PROGRESS ROLLBACK_COMPLETE', ResourceStatus)].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
-                  --output table 2>/dev/null || true
+                  --query "StackEvents[].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
+                  --output table 2>/dev/null || echo "stack events unavailable"
+
+                echo "=== ManagedNodeGroup-specific events ==="
+                aws cloudformation describe-stack-events \
+                  --stack-name "$STACK_NAME" --region "$AWS_REGION" \
+                  --query "StackEvents[?LogicalResourceId=='ManagedNodeGroup'].[Timestamp,ResourceStatus,ResourceStatusReason]" \
+                  --output table 2>/dev/null || echo "no ManagedNodeGroup events"
+
+                echo "=== EKS nodegroup health (if partially created) ==="
+                aws eks describe-nodegroup \
+                  --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
+                  --query "nodegroup.{status:status,health:health,nodeRole:nodeRole,subnets:subnets}" \
+                  --output json 2>/dev/null || echo "nodegroup not found"
+
                 exit 1
               }
           else

@@ -140,6 +140,7 @@ jobs:
               --node-type t3.medium \
               --nodes 2 --nodes-min 2 --nodes-max 2 \
               --managed \
+              --spot \
               --timeout 60m || {
                 echo "=== CloudFormation stack events ==="
                 aws cloudformation describe-stack-events \

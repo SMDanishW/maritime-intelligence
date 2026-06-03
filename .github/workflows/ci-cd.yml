@@ -107,7 +107,6 @@ jobs:
           echo "=== All managed nodegroups ==="
           aws eks list-nodegroups --cluster-name "$CLUSTER_NAME" --region "$AWS_REGION"
 
-          # Explicitly check whether NODEGROUP_NAME exists (not nodegroups[0])
           EXISTS=$(aws eks list-nodegroups \
             --cluster-name "$CLUSTER_NAME" --region "$AWS_REGION" \
             --query "contains(nodegroups, '${NODEGROUP_NAME}')" \
@@ -138,11 +137,11 @@ jobs:
             eksctl create nodegroup \
               --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
               --name "$NODEGROUP_NAME" \
-              --node-type t3.micro \
-              --nodes 2 --nodes-min 2 --nodes-max 4 \
+              --node-type t3.medium \
+              --nodes 2 --nodes-min 2 --nodes-max 2 \
               --managed \
               --timeout 60m || {
-                echo "=== All CloudFormation stack events ==="
+                echo "=== CloudFormation stack events ==="
                 aws cloudformation describe-stack-events \
                   --stack-name "$STACK_NAME" --region "$AWS_REGION" \
                   --query "StackEvents[].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
@@ -154,7 +153,7 @@ jobs:
                   --query "StackEvents[?LogicalResourceId=='ManagedNodeGroup'].[Timestamp,ResourceStatus,ResourceStatusReason]" \
                   --output table 2>/dev/null || echo "no ManagedNodeGroup events"
 
-                echo "=== EKS nodegroup health (if partially created) ==="
+                echo "=== EKS nodegroup health ==="
                 aws eks describe-nodegroup \
                   --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
                   --query "nodegroup.{status:status,health:health,nodeRole:nodeRole,subnets:subnets}" \
@@ -171,11 +170,11 @@ jobs:
               echo "Scaling up to 2 nodes..."
               aws eks update-nodegroup-config \
                 --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
-                --scaling-config minSize=2,maxSize=4,desiredSize=2
+                --scaling-config minSize=2,maxSize=2,desiredSize=2
             fi
           fi
 
-          echo "=== Verifying nodegroup exists before waiting ==="
+          echo "=== Verifying nodegroup before waiting ==="
           aws eks describe-nodegroup \
             --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
             --query "nodegroup.{status:status,scalingConfig:scalingConfig,nodeRole:nodeRole}" \
@@ -194,28 +193,19 @@ jobs:
               exit 1
             }
 
-          echo "=== Nodegroup ACTIVE — final status ==="
-          aws eks describe-nodegroup \
-            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
-            --query "nodegroup.{status:status,health:health,scalingConfig:scalingConfig,nodeRole:nodeRole}" \
-            --output json
-
           echo "=== Polling Kubernetes nodes (up to 15 min) ==="
           for i in $(seq 1 90); do
             READY=$(kubectl get nodes --no-headers 2>/dev/null | awk '$2=="Ready"{c++} END{print c+0}')
             echo "  attempt $i/90 — Ready nodes: $READY"
-            [ "$READY" -ge 1 ] && echo "Nodes are Ready — proceeding." && exit 0
+            [ "$READY" -ge 2 ] && echo "Nodes are Ready — proceeding." && exit 0
             sleep 10
           done
 
-          echo "ERROR: No Kubernetes nodes became Ready after 15 minutes"
-          aws eks describe-nodegroup \
-            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$NODEGROUP_NAME" --region "$AWS_REGION" \
-            --query "nodegroup.{status:status,health:health}" --output json
+          echo "ERROR: Nodes did not become Ready after 15 minutes"
           kubectl get nodes -o wide || true
           exit 1
 
-      - name: Install AWS Load Balancer Controller (skip if exists)
+      - name: Install AWS Load Balancer Controller
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
@@ -236,31 +226,17 @@ jobs:
             --attach-policy-arn arn:aws:iam::$AWS_ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy \
             --approve --override-existing-serviceaccounts 2>/dev/null || true
 
-          # Fetch VPC ID — required by newer ALB controller versions
+          # Fetch VPC ID
           VPC_ID=$(aws eks describe-cluster \
             --name $CLUSTER_NAME --region $AWS_REGION \
             --query "cluster.resourcesVpcConfig.vpcId" --output text)
           echo "VPC ID: $VPC_ID"
 
-          # Clean slate: uninstall any prior Helm release + force-delete leftover pods
-          helm uninstall aws-load-balancer-controller -n kube-system 2>/dev/null || true
-          kubectl delete pods -n kube-system \
-            -l app.kubernetes.io/name=aws-load-balancer-controller \
-            --force --grace-period=0 2>/dev/null || true
-
-          # Wait until no ALB controller pods remain (max 60s)
-          for i in {1..30}; do
-            count=$(kubectl get pods -n kube-system \
-              -l app.kubernetes.io/name=aws-load-balancer-controller \
-              --no-headers 2>/dev/null | wc -l)
-            [ "$count" -eq 0 ] && break
-            sleep 2
-          done
-
-          # Fresh Helm install — --wait blocks until deployment is Ready
           helm repo add eks https://aws.github.io/eks-charts 2>/dev/null || true
           helm repo update
-          helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+
+          # Upgrade-or-install: idempotent across re-runs
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
             -n kube-system \
             --set clusterName=$CLUSTER_NAME \
             --set serviceAccount.create=false \
@@ -268,20 +244,19 @@ jobs:
             --set vpcId=$VPC_ID \
             --set region=$AWS_REGION \
             --set replicaCount=1 \
-            --wait --timeout=5m
+            --wait --timeout=10m
 
       - name: ALB controller status (always)
         if: always()
         run: |
-          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION 2>/dev/null || true
           echo "=== Pods ==="
-          kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller -o wide
-          echo "=== Describe ==="
-          kubectl describe pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller | tail -60
+          kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller -o wide || true
           echo "=== Logs ==="
-          kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller --tail=50 --all-containers 2>/dev/null || echo "no logs"
+          kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller \
+            --tail=50 --all-containers 2>/dev/null || echo "no logs"
           echo "=== Node capacity ==="
-          kubectl top nodes 2>/dev/null || kubectl describe nodes | grep -A 4 "Allocated resources" || echo "no nodes found"
+          kubectl describe nodes | grep -A 5 "Allocated resources" || echo "no nodes"
 
       - name: Apply base k8s manifests (idempotent)
         run: |
@@ -306,6 +281,7 @@ jobs:
   # ── Deploy: build images → push ECR → roll out to EKS ───────────────────────
   deploy:
     needs: [bootstrap]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -345,19 +321,28 @@ jobs:
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
-          # Apply deployments with real image URLs substituted
           BACKEND_IMAGE=$ECR_REGISTRY/marine-backend:$IMAGE_TAG
           FRONTEND_IMAGE=$ECR_REGISTRY/marine-frontend:$IMAGE_TAG
 
           sed "s|\${BACKEND_IMAGE}|$BACKEND_IMAGE|g" k8s/backend/deployment.yaml | kubectl apply -f -
           sed "s|\${FRONTEND_IMAGE}|$FRONTEND_IMAGE|g" k8s/frontend/deployment.yaml | kubectl apply -f -
 
-          kubectl rollout status deployment/backend -n maritime --timeout=180s
-          kubectl rollout status deployment/frontend -n maritime --timeout=180s
+          kubectl rollout status deployment/backend -n maritime --timeout=300s
+          kubectl rollout status deployment/frontend -n maritime --timeout=300s
 
       - name: Print public URL
         run: |
-          echo "Waiting for ALB..."
-          sleep 30
-          kubectl get ingress maritime-ingress -n maritime \
-            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+          echo "Waiting for ALB hostname (up to 5 min)..."
+          for i in $(seq 1 30); do
+            HOSTNAME=$(kubectl get ingress maritime-ingress -n maritime \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            if [ -n "$HOSTNAME" ]; then
+              echo "App is live at: http://$HOSTNAME"
+              exit 0
+            fi
+            echo "  attempt $i/30 — waiting..."
+            sleep 10
+          done
+          echo "WARNING: ALB hostname not assigned yet — check ingress manually"
+          kubectl get ingress -n maritime

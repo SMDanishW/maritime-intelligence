@@ -4,10 +4,7 @@ metadata:
   name: frontend
   namespace: maritime
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: frontend
+  replicas: 1
   template:
     metadata:
       labels:

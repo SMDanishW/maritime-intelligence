@@ -4,6 +4,7 @@ metadata:
   name: backend-svc
   namespace: maritime
 spec:
+  type: NodePort
   selector:
     app: backend
   ports:

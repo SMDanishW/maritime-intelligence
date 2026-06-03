@@ -138,7 +138,7 @@ jobs:
             eksctl create nodegroup \
               --cluster "$CLUSTER_NAME" --region "$AWS_REGION" \
               --name "$NODEGROUP_NAME" \
-              --node-type t3.medium \
+              --node-type t3.micro \
               --nodes 2 --nodes-min 2 --nodes-max 4 \
               --managed \
               --timeout 60m || {

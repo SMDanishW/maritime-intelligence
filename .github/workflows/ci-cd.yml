@@ -209,16 +209,8 @@ jobs:
         run: |
 
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+          echo "Using ClusterIP services - ALB controller too resource-intensive for t3.micro"
 
-          # Use the correct current version URL
-          kubectl apply -f https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/download/v2.7.2/v2_7_2_full.yaml          
-          
-          # Wait for deployment with timeout
-          kubectl wait --for=condition=available --timeout=300s deployment/aws-load-balancer-controller -n kube-system || {
-            echo "ALB controller failed to deploy - checking logs"
-            kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller --tail=20
-            exit 1
-          }
 
 
       - name: ALB controller status (always)

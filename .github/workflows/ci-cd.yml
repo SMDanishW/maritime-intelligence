@@ -211,7 +211,7 @@ jobs:
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
 
           # Use the correct current version URL
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.7.2/docs/install/v2_7_2_full.yaml
+          kubectl apply -f https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/download/v2.7.2/v2_7_2_full.yaml          
           
           # Wait for deployment with timeout
           kubectl wait --for=condition=available --timeout=300s deployment/aws-load-balancer-controller -n kube-system || {

@@ -244,7 +244,11 @@ jobs:
             --set vpcId=$VPC_ID \
             --set region=$AWS_REGION \
             --set replicaCount=1 \
-            --wait --timeout=10m
+            --set resources.requests.cpu=100m \
+            --set resources.requests.memory=128Mi \
+            --set resources.limits.cpu=200m \
+            --set resources.limits.memory=256Mi \
+            --wait --timeout=20m
 
       - name: ALB controller status (always)
         if: always()

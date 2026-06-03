@@ -207,11 +207,14 @@ jobs:
 
       - name: Install AWS Load Balancer Controller
         run: |
+
+          aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+          # Or try this minimal installation:
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.4.7/docs/install/v2_4_7_full.yaml
+
           # Skip ALB controller for now - use NodePort services instead
           echo "Skipping ALB controller due to resource constraints"
           echo "Will use NodePort services for Free Tier deployment"
-
-          # aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
           
           # # IAM policy (idempotent)
           # curl -sLo alb-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json

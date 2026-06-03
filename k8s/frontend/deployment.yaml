@@ -6,8 +6,13 @@ metadata:
 spec:
   replicas: 1
   selector:           
+<<<<<<< HEAD
     matchLabels:      
       app: frontend
+=======
+  matchLabels:      
+    app: frontend
+>>>>>>> 5221cf2824e27202935c6c205bdac85c96062bd0
   template:
     metadata:
       labels:

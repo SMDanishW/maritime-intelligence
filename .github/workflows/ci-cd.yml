@@ -304,6 +304,13 @@ jobs:
           kubectl rollout status deployment/backend -n maritime --timeout=300s
           kubectl rollout status deployment/frontend -n maritime --timeout=300s
 
+          # Add after the rollout status commands:
+          echo "=== Pod Status ==="
+          kubectl get pods -n maritime -o wide
+          echo "=== Events ==="
+          kubectl get events -n maritime --sort-by='.lastTimestamp' | tail -10
+
+
       - name: Print public URL
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION

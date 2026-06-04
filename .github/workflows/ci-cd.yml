@@ -301,7 +301,7 @@ jobs:
           sed "s|\${BACKEND_IMAGE}|$BACKEND_IMAGE|g" k8s/backend/deployment.yaml | kubectl apply -f -
           sed "s|\${FRONTEND_IMAGE}|$FRONTEND_IMAGE|g" k8s/frontend/deployment.yaml | kubectl apply -f -
 
-           Check what's happening before waiting
+          # Check what's happening before waiting
           kubectl rollout status deployment/backend -n maritime --timeout=300s
           kubectl rollout status deployment/frontend -n maritime --timeout=300s
 

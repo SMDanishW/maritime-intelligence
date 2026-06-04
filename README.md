@@ -146,7 +146,7 @@ Guardrail is enforced at the first node in the LangGraph pipeline before any too
 | 5 | Dockerization + Docker Compose | ✅ |
 | 6 | GitHub Actions CI/CD + ECR | ✅ |
 | 7 | Kubernetes manifests (EKS) | ✅ |
-| 8 | AWS EKS deployment + ALB ingress | 🔄 In progress |
+| 8 | AWS EKS deployment + ALB ingress | ✅ |
 | 9 | Observability (Prometheus + Grafana) | ⬜ |
 
 ---

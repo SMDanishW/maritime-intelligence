@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(docker logs maritime-intelligence-backend-1 2>&1 | Where-Object { $_ -notmatch \"^INFO:\" } | Out-String)",
-      "PowerShell(docker exec maritime-intelligence-backend-1 printenv GROQ_API_KEY 2>&1)"
-    ]
-  }
-}

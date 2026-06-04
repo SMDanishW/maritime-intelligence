@@ -1,3 +1,5 @@
+import logging
+import traceback
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -5,6 +7,7 @@ from pydantic import BaseModel
 
 from app.agents.state import REFUSAL_MESSAGE
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -59,6 +62,7 @@ async def chat(request: ChatRequest):
                 trace.append(AgentTrace(node=node_name, output=_sanitize(node_output)))
                 state.update(node_output)
     except Exception as exc:
+        logger.error("Agent error: %s\n%s", exc, traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Agent error: {exc}")
 
     if not state.get("in_scope"):

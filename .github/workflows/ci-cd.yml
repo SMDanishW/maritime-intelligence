@@ -301,8 +301,30 @@ jobs:
           sed "s|\${BACKEND_IMAGE}|$BACKEND_IMAGE|g" k8s/backend/deployment.yaml | kubectl apply -f -
           sed "s|\${FRONTEND_IMAGE}|$FRONTEND_IMAGE|g" k8s/frontend/deployment.yaml | kubectl apply -f -
 
+           Check what's happening before waiting
           kubectl rollout status deployment/backend -n maritime --timeout=300s
           kubectl rollout status deployment/frontend -n maritime --timeout=300s
+
+          # Check what's happening before waiting
+          echo "=== Initial Pod Status ==="
+          kubectl get pods -n maritime -o wide
+          kubectl describe pods -n maritime
+
+          # Shorter timeout and continue on failure
+          kubectl rollout status deployment/backend -n maritime --timeout=180s || {
+            echo "Backend rollout failed - checking logs"
+            kubectl logs -n maritime -l app=backend --tail=50
+            kubectl get events -n maritime --sort-by='.lastTimestamp' | tail -20
+          }
+          
+          kubectl rollout status deployment/frontend -n maritime --timeout=180s || {
+            echo "Frontend rollout failed - checking logs"  
+            kubectl logs -n maritime -l app=frontend --tail=50
+          }
+
+          echo "=== Final Status ==="
+          kubectl get pods -n maritime -o wide
+          kubectl get all -n maritime
 
           # Add after the rollout status commands:
           echo "=== Pod Status ==="
